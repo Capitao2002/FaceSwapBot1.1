@@ -1,0 +1,28 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . /app
+
+RUN pip install --upgrade pip setuptools && \
+    pip install --no-cache-dir --prefer-binary -r requirements.txt
+
+RUN git clone https://github.com/facefusion/facefusion.git /facefusion
+
+RUN printf '#!/bin/sh\nexec python3 /facefusion/facefusion.py "$@"\n' > /usr/local/bin/facefusion && chmod +x /usr/local/bin/facefusion
+
+RUN mkdir -p /app/static
+
+ENV TZ=America/Sao_Paulo
+
+EXPOSE 5000
+
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app", "--workers=4", "--timeout=120"]
